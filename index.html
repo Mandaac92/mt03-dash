@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#080c10">
+<meta name="robots" content="noindex,nofollow">
+<title>MT-03 Console</title>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@500;600;700&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#080c10; --card:#0f1318; --card2:#141921; --blue:#0088ff; --green:#34c759; --red:#ff3b30;
+  --yellow:#ffd60a; --orange:#ff9f0a; --white:#f0f4f8; --muted:#4a5568; --text2:#8899aa;
+  --border:rgba(255,255,255,.06); --spotify:#1db954; --zone:#8899aa;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--white);font-family:'Rajdhani',system-ui,sans-serif;overflow:hidden;user-select:none;-webkit-user-select:none}
+.orb{font-family:'Orbitron','Rajdhani',monospace}
+
+/* ---------- Setup ---------- */
+#setup{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;justify-content:center;gap:14px;padding:28px 24px}
+#setup.hidden{display:none}
+#setup h1{font-family:'Orbitron',monospace;font-size:22px;letter-spacing:4px;text-align:center}
+#setup p{color:var(--text2);text-align:center;font-size:14px;letter-spacing:.5px}
+.lbl{font-size:11px;font-weight:700;letter-spacing:2px;color:var(--text2);text-transform:uppercase;margin-bottom:4px}
+.inp{width:100%;background:var(--card);border:1px solid rgba(0,136,255,.3);border-radius:12px;padding:13px 14px;color:var(--white);font:600 16px 'Rajdhani',sans-serif;outline:none}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:15px;font:700 15px 'Orbitron',monospace;letter-spacing:2px}
+.btn.ghost{background:var(--card2);color:var(--white);border:1px solid var(--border)}
+.btn.danger{background:#3a1512;color:#ff8a82}
+#serr{color:var(--red);font-size:13px;text-align:center;min-height:16px}
+
+/* ---------- App shell ---------- */
+#app{height:100dvh;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top)}
+#app.hidden{display:none}
+.hud{display:flex;align-items:center;gap:8px;padding:10px 14px 8px;border-bottom:1px solid var(--border)}
+.brand{font:900 15px 'Orbitron',monospace;letter-spacing:2px}
+.pname{color:var(--text2);font-weight:700;letter-spacing:2px;font-size:13px}
+.hud .r{margin-left:auto;display:flex;align-items:center;gap:10px}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--red)}
+.dot.on{background:var(--green);box-shadow:0 0 8px var(--green)}
+.dot.gps.on{background:var(--blue);box-shadow:0 0 8px var(--blue)}
+.pill{font:700 11px 'Orbitron',monospace;letter-spacing:1.5px;padding:4px 9px;border-radius:20px;border:1px solid var(--border);color:var(--text2)}
+body.riding .pill{color:#000;background:var(--green);border-color:var(--green)}
+.clk{font:700 15px 'Orbitron',monospace}
+
+.pages{flex:1;display:flex;overflow-x:auto;overflow-y:hidden;scroll-snap-type:x mandatory;scrollbar-width:none;overscroll-behavior:contain}
+.pages::-webkit-scrollbar{display:none}
+body.riding .pages{overflow-x:hidden}
+.page{flex:0 0 100%;scroll-snap-align:start;padding:12px 14px;overflow-y:auto;display:flex;flex-direction:column;gap:12px}
+
+.tabs{display:flex;border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom)}
+.tab{flex:1;text-align:center;padding:12px 0;font:700 12px 'Rajdhani';letter-spacing:2px;color:var(--muted)}
+.tab.act{color:var(--blue);box-shadow:inset 0 2px 0 var(--blue)}
+body.riding .tabs{display:none}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:14px}
+.big-lbl{font-size:12px;letter-spacing:3px;color:var(--text2);font-weight:700}
+
+/* ---------- Ride page ---------- */
+.speed{text-align:center;padding:10px 0 4px}
+.speed .v{font:900 84px/1 'Orbitron',monospace;font-variant-numeric:tabular-nums}
+.speed .u{font-size:13px;letter-spacing:4px;color:var(--text2);font-weight:700}
+body.riding .speed .v{font-size:120px}
+
+.hr{display:flex;align-items:center;justify-content:center;gap:14px;border-color:color-mix(in srgb,var(--zone) 50%,transparent)}
+.hr .v{font:900 56px/1 'Orbitron',monospace;color:var(--zone);font-variant-numeric:tabular-nums}
+body.riding .hr .v{font-size:72px}
+.hr .side{display:flex;flex-direction:column;gap:2px}
+.hr .z{font:700 13px 'Orbitron',monospace;letter-spacing:2px;color:var(--zone)}
+
+.music{display:flex;align-items:center;gap:10px}
+.music .meta{flex:1;min-width:0}
+.music .t{font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.music .a{font-size:13px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mb{width:54px;height:54px;border-radius:50%;background:var(--card2);border:1px solid var(--border);color:var(--white);font-size:22px;display:flex;align-items:center;justify-content:center}
+.mb.play{background:var(--spotify);color:#000;width:62px;height:62px}
+body.riding .mb{width:68px;height:68px;font-size:28px}
+body.riding .mb.play{width:80px;height:80px}
+
+.maps{display:flex;align-items:center;justify-content:center;gap:10px;background:#0b2a4a;border-color:rgba(0,136,255,.4);font:700 16px 'Orbitron',monospace;letter-spacing:2px;color:#fff;text-decoration:none;padding:18px}
+body.riding .maps{padding:26px;font-size:20px}
+
+.banner{display:none;background:#3a1512;border:1px solid var(--red);color:#ffb4ae;border-radius:12px;padding:10px 14px;font-weight:700;letter-spacing:1px;text-align:center}
+.banner.show{display:block}
+.banner.alert{background:#3a2a00;border-color:var(--orange);color:#ffd08a}
+
+/* ---------- Lean ---------- */
+.lean{display:flex;align-items:center;gap:12px}
+.lean .lv{font:900 30px/1 'Orbitron',monospace;min-width:92px;text-align:center;font-variant-numeric:tabular-nums}
+.lbar{position:relative;flex:1;height:14px;background:var(--card2);border-radius:7px;overflow:hidden}
+.lbar::after{content:'';position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--muted)}
+.lbar i{position:absolute;top:0;bottom:0;background:var(--blue);width:0;left:50%}
+body.riding .lean .lv{font-size:40px}
+
+/* ---------- Trip ---------- */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat .v{font:900 30px/1.1 'Orbitron',monospace;font-variant-numeric:tabular-nums}
+.stat .u{font-size:12px;color:var(--text2);letter-spacing:1px}
+.fuel .v.amber{color:var(--orange)} .fuel .v.red{color:var(--red)}
+
+/* ---------- Controls & info ---------- */
+.tile{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;font-size:18px;letter-spacing:1px}
+.tile .s{font:700 13px 'Orbitron',monospace;color:var(--text2)}
+.tile.off{opacity:.35}
+.tile .s.open{color:var(--orange)} .tile .s.closed{color:var(--green)}
+.row{display:flex;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);font-size:17px;font-weight:600}
+.row:last-child{border:0}
+.row span:first-child{color:var(--text2);letter-spacing:1px}
+.note{font-size:12px;color:var(--muted);text-align:center;letter-spacing:.5px}
+
+
+/* ===== Manda Ride UI — high-legibility visual layer ===== */
+:root{
+  --bg:#070b10; --card:#0d131b; --card2:#111a24;
+  --blue:#4aa8ff; --green:#5ed487; --red:#ff6259; --yellow:#f3d66b; --orange:#f5a94c;
+  --white:#eef5fb; --muted:#657587; --text2:#9aabba;
+  --border:rgba(151,181,207,.12); --zone:#9aabba;
+  --glow:rgba(74,168,255,.13); --panel-hi:rgba(255,255,255,.025);
+}
+body{
+  background:
+    radial-gradient(circle at 50% -15%,rgba(34,103,162,.15),transparent 35%),
+    linear-gradient(180deg,#080d13 0%,#06090d 100%);
+}
+#app{background:transparent}
+.hud{
+  min-height:52px;padding:9px 15px 8px;
+  background:rgba(7,11,16,.92);border-bottom:1px solid rgba(117,165,203,.14);
+}
+.brand{font-size:13px;letter-spacing:2.6px;color:#d9e8f3}
+.pname{font-size:11px;letter-spacing:2.4px;color:#6f8496}
+.hud .r{gap:9px}
+.pill{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:1.6px;padding:4px 9px;background:#0d141c}
+.clk{font-family:'Rajdhani',sans-serif;font-size:17px;letter-spacing:.8px;color:#c6d5df}
+.dot{width:7px;height:7px;box-shadow:none}
+.dot.on{box-shadow:0 0 0 3px rgba(94,212,135,.09)}
+.dot.gps.on{box-shadow:0 0 0 3px rgba(74,168,255,.09)}
+.page{padding:11px 13px 14px;gap:10px}
+.card{
+  background:linear-gradient(180deg,var(--panel-hi),transparent 45%),var(--card);
+  border:1px solid var(--border);border-radius:14px;padding:13px;
+  box-shadow:0 8px 24px rgba(0,0,0,.13);
+}
+.big-lbl{font-family:'Rajdhani',sans-serif;font-size:11px;letter-spacing:2.3px;color:#7f93a4}
+
+/* Ride: one-glance hierarchy */
+.speed{padding:5px 0 0;position:relative}
+.speed::before{content:'GROUND SPEED';display:block;font:700 10px 'Rajdhani',sans-serif;letter-spacing:3px;color:#5e7487;margin-bottom:2px}
+.speed .v{font-family:'Rajdhani',sans-serif;font-size:96px;font-weight:700;line-height:.86;letter-spacing:-4px;color:#f5f9fc;text-shadow:0 0 26px rgba(74,168,255,.08)}
+.speed .u{font-size:11px;letter-spacing:3.5px;color:#6f8496;margin-top:7px}
+body.riding .speed .v{font-size:132px}
+
+.hr{justify-content:flex-start;gap:12px;min-height:91px;padding:13px 16px;position:relative;overflow:hidden}
+.hr::after{content:'';position:absolute;inset:0 auto 0 0;width:3px;background:var(--zone);opacity:.9}
+.hr svg{width:29px;height:29px;opacity:.9;flex:none}
+.hr .v{font-family:'Rajdhani',sans-serif;font-size:61px;font-weight:700;letter-spacing:-1px;min-width:92px;text-align:right}
+.hr .side{gap:1px}
+.hr .z{font-family:'Rajdhani',sans-serif;font-size:13px;letter-spacing:1.4px}
+body.riding .hr .v{font-size:78px}
+
+.lean{padding:11px 14px;min-height:53px}
+.lean .lv{font-family:'Rajdhani',sans-serif;font-size:28px;font-weight:700;min-width:82px}
+.lbar{height:8px;border-radius:5px;background:#17212b}
+.lbar i{background:var(--blue);opacity:.85}
+body.riding .lean .lv{font-size:34px}
+
+.music{padding:10px 12px;background:#0b1118}
+.music .t{font-size:16px;color:#dce7ee}.music .a{color:#778c9d}
+.mb{width:48px;height:48px;background:#131c26;border-color:rgba(255,255,255,.08);font-size:19px}
+.mb.play{width:55px;height:55px;background:#dbe7ee;color:#081018}
+body.riding .mb{width:60px;height:60px;font-size:23px}
+body.riding .mb.play{width:68px;height:68px}
+.maps{background:#0d2030;border-color:rgba(74,168,255,.28);color:#cfe9ff;font-family:'Rajdhani',sans-serif;font-size:15px;letter-spacing:2px;padding:15px}
+body.riding .maps{padding:20px;font-size:17px}
+.banner{border-radius:10px;padding:9px 13px;font-size:14px;letter-spacing:.6px}
+
+/* Secondary pages */
+.grid{gap:9px}.stat{min-height:94px}
+.stat .v{font-family:'Rajdhani',sans-serif;font-size:35px;font-weight:700;letter-spacing:-1px}
+.stat .u{font-size:10px;letter-spacing:1.4px;color:#718596}
+.tile{font-size:16px;letter-spacing:.7px;min-height:57px}
+.tile .s{font-family:'Rajdhani',sans-serif;font-size:12px;letter-spacing:1.3px}
+.row{font-size:16px;padding:10px 1px}.row span:first-child{font-size:12px;letter-spacing:1.5px;color:#718596}
+.btn{border-radius:11px;font-family:'Rajdhani',sans-serif;font-size:15px;font-weight:700;letter-spacing:1.5px;min-height:49px}
+.tabs{background:#070b10;border-color:rgba(117,165,203,.12)}
+.tab{padding:11px 0;font-size:11px;letter-spacing:1.7px}
+.tab.act{color:#9fd2ff;box-shadow:inset 0 2px 0 var(--blue)}
+.note{color:#637688;font-size:11px;line-height:1.35}
+
+/* Riding mode: reduce visual noise further */
+body.riding .hud{min-height:46px;padding-top:7px;padding-bottom:6px}
+body.riding .brand,body.riding .pname{opacity:.72}
+body.riding .page{padding-top:8px;gap:9px}
+body.riding .card{box-shadow:none}
+
+@media (max-height:740px){
+  .speed .v{font-size:80px} body.riding .speed .v{font-size:108px}
+  .hr{min-height:80px}.hr .v{font-size:52px}body.riding .hr .v{font-size:66px}
+  .music{padding-top:8px;padding-bottom:8px}.maps{padding:12px}
+}
+
+
+/* ===== V9 · MT-03 cockpit, sized for the actual S25 Ultra viewport ===== */
+:root{--bg:#070c12;--card:#101923;--card2:#15212d;--blue:#50b5ff;--white:#f5f9fd;--text2:#a6b7c8;--border:rgba(142,184,218,.16)}
+body{background:#070c12;font-family:system-ui,'Rajdhani',sans-serif}
+.hud{min-height:57px;padding:9px 17px;background:#080e15;border-bottom:1px solid #213446}
+.brand{font:800 17px system-ui,sans-serif;letter-spacing:1.1px;color:#f3f9ff}
+.pname{font:700 11px system-ui,sans-serif;letter-spacing:1px;color:#7e9ab0}
+.hud .r{gap:8px}.pill{font:750 11px system-ui,sans-serif;letter-spacing:.6px;padding:6px 10px}
+.clk{font:700 15px system-ui,sans-serif;color:#e4f2fb}
+.dot{width:8px;height:8px}
+.ride-page{padding:12px 14px 14px;gap:12px;background:radial-gradient(ellipse at 50% 6%,rgba(40,107,169,.11),transparent 65%)}
+.cockpit{position:relative;flex:0 0 auto;min-height:435px;padding:17px 19px 15px;border:1px solid rgba(93,153,200,.28);border-radius:24px;background:linear-gradient(150deg,#142536 0%,#0b1621 46%,#0b121b 100%);box-shadow:inset 0 1px 0 rgba(173,218,255,.08),0 18px 42px rgba(0,0,0,.25);overflow:hidden}
+.cockpit::before{content:'';position:absolute;top:0;left:23px;right:23px;height:2px;background:linear-gradient(90deg,transparent,#53baff,transparent)}
+.instrument-top{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.eyebrow{font:800 12px system-ui,sans-serif;letter-spacing:1.3px;color:#8daac1}
+.live-indicator{font:750 11px system-ui,sans-serif;color:#8daac1;letter-spacing:.2px}
+.live-indicator.good{color:#65dca0}.live-indicator.bad{color:#ffc178}
+.speed{padding:19px 0 12px;text-align:center}
+.speed::before{display:none}
+.speed .v{font:750 clamp(112px,32vw,164px)/.95 system-ui,sans-serif;letter-spacing:-9px;color:#fff;text-shadow:none;font-variant-numeric:tabular-nums}
+.speed .u{font:750 18px system-ui,sans-serif;letter-spacing:0;color:#c7e7fa;margin-top:6px}
+.speed-caption{font:750 11px system-ui,sans-serif;letter-spacing:1.5px;color:#6e91ab;margin-left:8px}
+.instrument-rule{height:1px;background:linear-gradient(90deg,transparent,#42617b,transparent);margin:0 0 12px}
+.cockpit .hr{display:flex;justify-content:space-between;gap:9px;align-items:center;min-height:125px;padding:4px 0 12px;background:transparent;border:0;box-shadow:none;border-radius:0;cursor:pointer;overflow:visible}
+.cockpit .hr::after{display:none}
+.hr-primary{display:flex;align-items:baseline;gap:7px;min-width:0;flex:0 0 auto}
+.heart-symbol{font:700 23px system-ui,sans-serif;color:var(--zone);align-self:center;margin-right:1px}
+.cockpit .hr .v{font:750 clamp(62px,18vw,92px)/1 system-ui,sans-serif;letter-spacing:-4px;min-width:0;text-align:left;color:var(--zone);font-variant-numeric:tabular-nums}
+.hr-unit{font:700 14px system-ui,sans-serif;color:#a4b7c9}
+.hr-detail{display:flex;flex-direction:column;gap:7px;align-items:flex-end;text-align:right;min-width:0}
+.hr-heading{font:800 10px system-ui,sans-serif;letter-spacing:1px;color:#829eb5}
+.cockpit .hr .z{font:800 13px system-ui,sans-serif;letter-spacing:0;color:var(--zone);overflow-wrap:anywhere}
+.hr-action{font:700 10px system-ui,sans-serif;color:#7b9ab1;letter-spacing:.1px}
+.cockpit .lean{display:flex;gap:10px;align-items:center;padding:13px 0 0;min-height:39px;border:0;border-top:1px solid #263e52;background:transparent;border-radius:0;box-shadow:none}
+.lean-name{font:800 11px system-ui,sans-serif;letter-spacing:.8px;color:#88a5bb}
+.cockpit .lean .lv{font:750 19px system-ui,sans-serif;min-width:56px;text-align:right;color:#d6e9f7}
+.cockpit .lbar{height:9px;background:#1a3042}
+.cockpit .lbar i{background:#51b9ff}
+.ride-actions{display:flex;align-items:stretch;gap:9px;min-height:75px}
+.ride-actions .music{min-width:0;flex:1;gap:5px;padding:9px 9px 9px 13px;background:#101b26;border:1px solid #263b4e;border-radius:18px;box-shadow:none}
+.ride-actions .music .meta{min-width:0;margin-right:4px}
+.ride-actions .music .t{font:750 14px system-ui,sans-serif;color:#e9f5ff}
+.ride-actions .music .a{font:500 11px system-ui,sans-serif;color:#8ba6b9;margin-top:3px}
+.ride-actions .mb{width:37px;height:48px;flex:0 0 37px;border:0;background:transparent;border-radius:10px;font-size:19px}
+.ride-actions .mb.play{width:45px;flex-basis:45px;background:#c9eaff;color:#07121d;font-size:20px}
+.ride-actions .maps{width:76px;flex:0 0 76px;display:flex;flex-direction:column;justify-content:center;gap:2px;padding:6px;border-radius:18px;border:1px solid #285778;background:#0c2940;color:#d7efff;font:750 25px system-ui,sans-serif;letter-spacing:0;text-decoration:none}
+.ride-actions .maps span{font-size:10px;letter-spacing:.5px}
+.ride-foot{font:700 10px system-ui,sans-serif;letter-spacing:.7px;color:#5f7b91;text-align:center;padding:3px}
+.ride-foot span{color:#4ab0fb}
+body.riding .ride-page{padding-top:8px;gap:10px}
+body.riding .speed .v{font-size:clamp(118px,34vw,174px)}
+body.riding .cockpit .hr .v{font-size:clamp(68px,19vw,96px)}
+body.riding .ride-actions .mb{width:42px;flex-basis:42px;height:53px}
+body.riding .ride-actions .mb.play{width:48px;flex-basis:48px}
+body.riding .ride-actions .maps{padding:6px;font-size:25px}
+@media(max-width:390px){.cockpit{padding:15px 13px;min-height:415px}.speed .v{font-size:112px}.hr-primary{gap:4px}.cockpit .hr .v{font-size:60px}.hr-detail{gap:5px}.ride-actions .music .meta{max-width:76px}.ride-actions .mb{width:34px;flex-basis:34px}.ride-actions .mb.play{width:41px;flex-basis:41px}.ride-actions .maps{width:64px;flex-basis:64px}}
+@media(max-height:760px){.cockpit{min-height:360px;padding-top:12px;padding-bottom:10px}.speed{padding:9px 0 5px}.speed .v{font-size:105px}.cockpit .hr{min-height:102px}.cockpit .hr .v{font-size:64px}.ride-actions{min-height:65px}}
+
+</style>
+</head>
+<body>
+
+<!-- SETUP -->
+<div id="setup">
+  <h1>MT-03</h1>
+  <p>Connect to Home Assistant</p>
+  <div><div class="lbl">Home Assistant URL</div><input class="inp" id="iurl" placeholder="https://xxxx.ui.nabu.casa" autocomplete="off" autocapitalize="off" spellcheck="false"></div>
+  <div><div class="lbl">Long-lived access token</div><input class="inp" id="itok" type="password" placeholder="Paste token here" autocomplete="off" spellcheck="false"></div>
+  <div><div class="lbl">Max heart rate (bpm)</div><input class="inp" id="imax" type="number" inputmode="numeric" placeholder="190"></div>
+  <div id="serr"></div>
+  <button class="btn" onclick="saveSetup()">CONNECT</button>
+  <p style="font-size:12px">Saved on this phone only. HA &rarr; Profile &rarr; Security &rarr; Long-lived access tokens</p>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="hud">
+    <span class="brand">MT-03</span><span class="pname" id="pname">RIDE</span>
+    <div class="r">
+      <span class="pill" id="mode">PARKED</span>
+      <div class="dot gps" id="gdot" title="GPS"></div>
+      <div class="dot" id="cdot" title="Home Assistant"></div>
+      <span class="clk" id="clk">--:--</span>
+    </div>
+  </div>
+
+  <div class="pages" id="pages">
+
+    <!-- RIDE: glance-first cockpit -->
+    <div class="page ride-page" data-name="RIDE">
+      <div class="banner alert" id="alertBanner"></div>
+      <div class="banner" id="fuelBanner">FUEL — CHECK RANGE</div>
+      <section class="cockpit" aria-label="Ride instruments">
+        <div class="instrument-top"><span class="eyebrow">MT / 03</span><span class="live-indicator" id="gpsLabel">GPS WAITING</span></div>
+        <div class="speed"><div class="v" id="spd">--</div><div class="u">km/h <span class="speed-caption">SPEED</span></div></div>
+        <div class="instrument-rule"></div>
+        <div class="hr" id="hrCard" onclick="connectHR()" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();connectHR()}" title="Tap to connect live Bluetooth heart rate">
+          <div class="hr-primary"><span class="heart-symbol" aria-hidden="true">♥</span><div class="v" id="hr">--</div><span class="hr-unit">bpm</span></div>
+          <div class="hr-detail"><span class="hr-heading">HEART RATE</span><span class="z" id="hrz">TAP TO CONNECT</span><span class="hr-action">TAP TO CONNECT WATCH ↗</span></div>
+        </div>
+        <div class="lean"><span class="lean-name">LEAN</span><div class="lbar"><i id="leanFill"></i></div><div class="lv" id="lean">--</div></div>
+      </section>
+      <div class="ride-actions">
+        <div class="music">
+          <div class="meta"><div class="t" id="mt">Spotify</div><div class="a" id="ma">Not playing</div></div>
+          <button class="mb" aria-label="Previous track" onclick="media('media_previous_track')">&#9198;</button>
+          <button class="mb play" id="mp" aria-label="Play or pause" onclick="media('media_play_pause')">&#9654;</button>
+          <button class="mb" aria-label="Next track" onclick="media('media_next_track')">&#9197;</button>
+        </div>
+        <a class="maps" href="https://www.google.com/maps" target="_blank" rel="noopener" aria-label="Open Google Maps">↗ <span>MAPS</span></a>
+      </div>
+      <div class="ride-foot">LIVE INSTRUMENTS <span>·</span> CHECK BEFORE RIDING</div>
+    </div>
+
+    <!-- TRIP -->
+    <div class="page" data-name="TRIP">
+      <div class="grid">
+        <div class="card stat"><div class="big-lbl">DISTANCE</div><div class="v" id="tDist">0.0</div><div class="u">KM</div></div>
+        <div class="card stat"><div class="big-lbl">RIDE TIME</div><div class="v" id="tTime">0:00</div><div class="u">MOVING</div></div>
+        <div class="card stat"><div class="big-lbl">AVG SPEED</div><div class="v" id="tAvg">0</div><div class="u">KM/H</div></div>
+        <div class="card stat"><div class="big-lbl">MAX SPEED</div><div class="v" id="tMax">0</div><div class="u">KM/H</div></div>
+      </div>
+      <div class="grid">
+        <div class="card stat"><div class="big-lbl">MAX LEAN L</div><div class="v" id="tMaxL">0</div><div class="u">DEGREES</div></div>
+        <div class="card stat"><div class="big-lbl">MAX LEAN R</div><div class="v" id="tMaxR">0</div><div class="u">DEGREES</div></div>
+      </div>
+      <div class="card stat fuel"><div class="big-lbl">SINCE LAST FUEL</div><div class="v" id="tFuel" style="font-size:44px">0.0</div><div class="u">KM &middot; amber at <span id="fa"></span>, red at <span id="fr"></span></div></div>
+      <button class="btn" onclick="fuelled()">FUELLED &mdash; RESET</button>
+      <button class="btn ghost" onclick="zeroLean()">ZERO LEAN (BIKE UPRIGHT)</button>
+      <button class="btn danger" id="resetBtn" onclick="resetTrip()">RESET TRIP</button>
+      <div class="note">Distance uses phone GPS. Keep this screen open while riding.<br>Lean is approximate. Mount the phone securely, keep the bike upright, then tap ZERO LEAN. Re-zero after changing the phone mount or screen orientation.</div>
+    </div>
+
+    <!-- CONTROLS -->
+    <div class="page" data-name="CONTROLS" id="controls"></div>
+
+    <!-- RIDER INFO -->
+    <div class="page" data-name="RIDER INFO">
+      <div class="card">
+        <div class="row"><span>WATCH BATTERY</span><span id="iWatch">--</span></div>
+        <div class="row"><span>PHONE BATTERY</span><span id="iPhone">--</span></div>
+        <div class="row"><span>HOME ASSISTANT</span><span id="iHA">--</span></div>
+        <div class="row"><span>GPS</span><span id="iGPS">--</span></div>
+      </div>
+      <div class="card">
+        <div class="row"><span>WEATHER</span><span id="wCond">--</span></div>
+        <div class="row"><span>TEMPERATURE</span><span id="wTemp">--</span></div>
+        <div class="row"><span>WIND</span><span id="wWind">--</span></div>
+        <div class="row"><span>FEELS AT SPEED</span><span id="wChill">--</span></div>
+      </div>
+      <button class="btn ghost" onclick="openSetup()">CONNECTION SETTINGS</button>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+</div>
+
+<script>
+/* ================= CONFIG ================= */
+/* v11 changes vs v10 (all found by testing v10 at S22 Ultra size):
+   1. GPS dropout no longer auto-parks a moving bike (tunnel/trees used to unlock the controls).
+   2. Trip jump-filter had a km-vs-metres bug, so GPS glitches were never rejected.
+   3. Bluetooth device chooser can no longer open while riding.
+   4. Bluetooth HR silently reconnects after a drop (once paired this session).
+   5. PHONE BATTERY reads the phone running the dash (falls back to the HA sensor).
+   6. Heart-rate/alert state refreshes every 2 s (was 10 s). */
+const CFG = {
+  haUrl: '',   // entered once on the phone (or passed as ?ha=https://xxxx.ui.nabu.casa)
+  ents: {
+    hr:        'sensor.portable_s25_ultra_heart_rate',
+    watchBatt: 'sensor.galaxy_watch7_hqht_battery_level',
+    phoneBatt: 'sensor.mobile_s25_ultra_battery_level',
+    music:     'media_player.spotify_amanda',
+    weather:   'weather.home'
+  },
+  // Controls page. entity: null = not wired yet (tile shown greyed out). Fill in IDs to enable.
+  controls: [
+    { name:'GARAGE DOOR', entity:'cover.garage_roller_door', kind:'cover' },
+    { name:'FRONT LIGHTS', entity:null, kind:'toggle' },
+    { name:'FRONT GATE',   entity:null, kind:'cover' },
+    { name:'CAMERAS',      entity:null, kind:'toggle' }
+  ],
+  rideOnKmh: 10,      // switch to RIDE mode above this speed
+  parkBelowKmh: 3,    // switch back to PARKED after this speed for parkDelayMs
+  parkDelayMs: 8000,
+  fuelAmberKm: 200,   // km since fuel: tweak to suit the MT-03's real range
+  fuelRedKm: 250,
+  hrStaleMs: 90000,    // HA fallback only; HR older than 90s is not current
+  bleHrStaleMs: 10000, // direct BLE HR must update within 10s
+  gpsMaxAccuracyM: 35, // reject poor fixes from speed/distance
+  gpsMaxKmh: 200,      // reject impossible GPS speed spikes for this bike
+  gpsLostParkMs: 300000 // only after a 5 min GPS outage may a 'riding' dash fall back to PARKED
+};
+
+/* ================= HELPERS ================= */
+function haFromLink(){
+  try{ const v=new URLSearchParams(location.search).get('ha'); return v && /^https:\/\/[^\s\/]+$/.test(v.replace(/\/+$/,'')) ? v.replace(/\/+$/,'') : ''; }
+  catch(e){ return ''; }
+}
+const $ = id => document.getElementById(id);
+const ls = {
+  get:(k,d)=>{try{const v=localStorage.getItem(k);return v===null?d:v}catch(e){return d}},
+  set:(k,v)=>{try{localStorage.setItem(k,v)}catch(e){}}
+};
+let token = ls.get('mt03_token',''), haUrl = ls.get('mt03_url', haFromLink() || CFG.haUrl), maxHR = +ls.get('mt03_maxhr',190);
+
+/* ================= SETUP ================= */
+function openSetup(){ $('iurl').value=haUrl; $('itok').value=''; $('imax').value=maxHR; $('serr').textContent=''; $('setup').classList.remove('hidden'); }
+function saveSetup(){
+  const u=$('iurl').value.trim().replace(/\/+$/,''), t=$('itok').value.trim() || token, rawM=+$('imax').value||190, m=Math.max(100,Math.min(230,rawM));
+  if(!/^https?:\/\//.test(u)){ $('serr').textContent='URL must start with https://'; return; }
+  if(!t){ $('serr').textContent='Paste your token'; return; }
+  const connectionChanged = u!==haUrl || t!==token;
+  haUrl=u; token=t; maxHR=m;
+  ls.set('mt03_url',u); ls.set('mt03_token',t); ls.set('mt03_maxhr',m);
+  $('setup').classList.add('hidden'); $('app').classList.remove('hidden');
+  if(!started) startAll();
+  else { renderHA(); if(connectionChanged || !haOK) reconnectHA(); }
+}
+
+/* ================= HOME ASSISTANT ================= */
+let ws, msgId=1, cbs={}, S={}, retry=0, haOK=false, started=false, reconnectTimer=null;
+function hsend(o,cb){ const id=msgId++; o.id=id; if(cb) cbs[id]=cb; ws.send(JSON.stringify(o)); }
+function reconnectHA(){
+  if(reconnectTimer){ clearTimeout(reconnectTimer); reconnectTimer=null; }
+  haOK=false; retry=0; cbs={}; S={}; renderConn(); renderHA();
+  if(ws){ ws.onclose=null; try{ ws.close(); }catch(e){} }
+  ws=null; haConnect();
+}
+function callService(domain,service,data){ if(ws&&ws.readyState===1) hsend({type:'call_service',domain,service,service_data:data}); }
+function haConnect(){
+  try{ ws=new WebSocket(haUrl.replace(/^http/,'ws')+'/api/websocket'); }catch(e){ return setTimeout(haConnect,5000); }
+  ws.onmessage=ev=>{
+    const m=JSON.parse(ev.data);
+    if(m.type==='auth_required') ws.send(JSON.stringify({type:'auth',access_token:token}));
+    else if(m.type==='auth_ok'){
+      haOK=true; retry=0; renderConn();
+      hsend({type:'get_states'},r=>{ (r.result||[]).forEach(s=>S[s.entity_id]=s); renderHA(); });
+      hsend({type:'subscribe_events',event_type:'state_changed'});
+    }
+    else if(m.type==='auth_invalid'){ haOK=false; ws.onclose=null; openSetup(); $('serr').textContent='Token rejected — paste a new one.'; }
+    else if(m.type==='result'){ if(cbs[m.id]){ cbs[m.id](m); delete cbs[m.id]; } }
+    else if(m.type==='event' && m.event.event_type==='state_changed'){
+      const d=m.event.data; if(d.new_state) S[d.entity_id]=d.new_state; renderHA();
+    }
+  };
+  ws.onclose=()=>{ haOK=false; renderConn();
+    if(reconnectTimer) clearTimeout(reconnectTimer);
+    reconnectTimer=setTimeout(()=>{ reconnectTimer=null; haConnect(); },Math.min(30000,2000*(++retry)));
+  };
+  ws.onerror=()=>{ try{ws.close()}catch(e){} };
+}
+function renderConn(){ $('cdot').classList.toggle('on',haOK); $('iHA').textContent=haOK?'CONNECTED':'OFFLINE'; }
+
+/* ---------- Heart rate zones ---------- */
+function zoneOf(bpm){
+  const p=bpm/maxHR*100;
+  if(p<60) return ['Z1 EASY','#8899aa'];
+  if(p<70) return ['Z2 STEADY','#34c759'];
+  if(p<80) return ['Z3 WORKING','#ffd60a'];
+  if(p<90) return ['Z4 HARD','#ff9f0a'];
+  return ['Z5 MAX','#ff3b30'];
+}
+const num = s => { const n=parseFloat(s&&s.state); return isNaN(n)?null:n; };
+// Battery of the phone RUNNING the dash (Chrome/Android). Falls back to the HA phone sensor.
+let localBatt=null, localCharging=false;
+function phoneBattery(){ return localBatt!==null ? localBatt : num(S[CFG.ents.phoneBatt]); }
+function startBattery(){
+  if(!navigator.getBattery) return;
+  navigator.getBattery().then(b=>{
+    const upd=()=>{ localBatt=Math.round(b.level*100); localCharging=!!b.charging; renderHA(); };
+    b.addEventListener('levelchange',upd); b.addEventListener('chargingchange',upd); upd();
+  }).catch(()=>{});
+}
+function stateAgeMs(s){ const t=s&&(s.last_updated||s.last_changed); const ms=t?Date.parse(t):NaN; return isNaN(ms)?Infinity:Math.max(0,Date.now()-ms); }
+// Direct BLE HR from Heart for Bluetooth is primary. HA is fallback only.
+let hrDevice=null, hrChar=null, bleHR=null, bleHrAt=0, bleHrConnecting=false;
+function bleHrAge(){ return bleHrAt ? Date.now()-bleHrAt : Infinity; }
+function currentHR(){
+  const ba=bleHrAge();
+  if(bleHR!==null && bleHR>=30 && bleHR<=240 && ba<=CFG.bleHrStaleMs)
+    return {value:bleHR,status:'LIVE BLE',age:ba,source:'ble'};
+  const s=S[CFG.ents.hr], v=num(s), age=stateAgeMs(s);
+  if(v!==null && v>=30 && v<=240 && age<=CFG.hrStaleMs)
+    return {value:v,status:'HA FALLBACK',age,source:'ha'};
+  if(hrDevice && hrDevice.gatt && hrDevice.gatt.connected)
+    return {value:null,status:'BLE WAITING',age:ba,source:'ble'};
+  return {value:null,status:'TAP HR TO CONNECT',age:Infinity,source:'none'};
+}
+function parseHR(e){
+  const d=e.target.value; if(!d || d.byteLength<2) return;
+  const flags=d.getUint8(0), bpm=(flags&1)?(d.byteLength>=3?d.getUint16(1,true):null):d.getUint8(1);
+  if(bpm!==null && bpm>=30 && bpm<=240){ bleHR=bpm; bleHrAt=Date.now(); renderHA(); }
+}
+let hrRetry=0, hrRetryTimer=null;
+function hrDisconnected(){ hrChar=null; bleHR=null; bleHrAt=0; renderHA(); scheduleHrReconnect(); }
+// Silent auto-reconnect (never opens the chooser) once the watch has been paired this session.
+function scheduleHrReconnect(){
+  if(!hrDevice || hrRetryTimer) return;
+  const wait=Math.min(30000,2000*(++hrRetry));
+  hrRetryTimer=setTimeout(()=>{ hrRetryTimer=null; if(hrDevice && !(hrDevice.gatt && hrDevice.gatt.connected)) connectHR(true); },wait);
+}
+async function connectHR(auto){
+  if(bleHrConnecting) return;
+  if(!navigator.bluetooth){ if(!auto) alert('Live Bluetooth HR needs Chrome/Edge on Android over HTTPS.'); return; }
+  if(riding && !hrDevice) return;   // never open the device chooser while the bike is moving
+  try{
+    bleHrConnecting=true;
+    if(!hrDevice){
+      hrDevice=await navigator.bluetooth.requestDevice({filters:[{services:['heart_rate']}],optionalServices:['heart_rate']});
+      hrDevice.addEventListener('gattserverdisconnected',hrDisconnected);
+    }
+    const server=hrDevice.gatt.connected?hrDevice.gatt:await hrDevice.gatt.connect();
+    const svc=await server.getPrimaryService('heart_rate');
+    hrChar=await svc.getCharacteristic('heart_rate_measurement');
+    hrChar.removeEventListener('characteristicvaluechanged',parseHR);
+    hrChar.addEventListener('characteristicvaluechanged',parseHR);
+    await hrChar.startNotifications(); hrRetry=0; renderHA();
+  }catch(e){ console.warn('BLE HR connect failed',e); hrDisconnected(); }
+  finally{ bleHrConnecting=false; }
+}
+
+function renderHA(){
+  const E=CFG.ents;
+  // Heart rate
+  const h=currentHR();
+  if(h.value!==null){ const [z,c]=zoneOf(h.value); $('hr').textContent=Math.round(h.value); $('hrz').textContent=z; document.documentElement.style.setProperty('--zone',c); }
+  else { $('hr').textContent='--'; $('hrz').textContent=(riding&&h.source==='none')?'NO HR SIGNAL':h.status; document.documentElement.style.setProperty('--zone','#8899aa'); }
+  const action=document.querySelector('.hr-action');
+  if(action) action.textContent=h.source==='ble'?'● LIVE WATCH':riding?'CONNECT WHEN STOPPED':h.source==='ha'?'TAP FOR LIVE WATCH ↗':'TAP TO CONNECT WATCH ↗';
+  // Batteries
+  const wb=num(S[E.watchBatt]), pb=phoneBattery();
+  $('iWatch').textContent=wb!==null?Math.round(wb)+'%':'--';
+  $('iPhone').textContent=pb!==null?Math.round(pb)+'%'+(localCharging?' ⚡':''):'--';
+  // Music
+  const mp=S[E.music];
+  if(mp){
+    const a=mp.attributes||{};
+    $('mt').textContent=a.media_title||'Spotify';
+    $('ma').textContent=a.media_artist||(mp.state==='playing'?'':'Not playing');
+    $('mp').innerHTML=mp.state==='playing'?'&#9208;':'&#9654;';
+  }
+  // Weather
+  const w=S[E.weather];
+  if(w){
+    const a=w.attributes||{};
+    $('wCond').textContent=(w.state||'--').replace(/-/g,' ').toUpperCase();
+    $('wTemp').textContent=a.temperature!=null?Math.round(a.temperature)+'°C':'--';
+    $('wWind').textContent=a.wind_speed!=null?Math.round(a.wind_speed)+' km/h':'--';
+  }
+  renderChill(); renderControls(); renderAlerts();
+}
+function renderChill(){
+  const w=S[CFG.ents.weather]; const T=w&&w.attributes?w.attributes.temperature:null;
+  if(T==null){ $('wChill').textContent='--'; return; }
+  const v=Math.max(speed||0,0);
+  if(T<=10 && v>=4.8){
+    const c=13.12+0.6215*T-11.37*Math.pow(v,0.16)+0.3965*T*Math.pow(v,0.16);
+    $('wChill').textContent=Math.round(c)+'°C';
+  } else $('wChill').textContent=T>10?'No chill effect':'Ride to calculate';
+}
+function media(svc){ callService('media_player',svc,{entity_id:CFG.ents.music}); }
+
+/* ---------- Controls page ---------- */
+function buildControls(){
+  const el=$('controls');
+  el.innerHTML = CFG.controls.map((c,i)=>
+    `<div class="card tile ${c.entity?'':'off'}" id="ct${i}" ${c.entity?`onclick="ctl(${i})"`:''}>
+       <span>${c.name}</span><span class="s" id="cs${i}">${c.entity?'--':'NOT SET'}</span></div>`).join('')
+    + '<div class="note">Greyed tiles need an entity ID in CFG.controls.</div>';
+}
+function renderControls(){
+  CFG.controls.forEach((c,i)=>{
+    if(!c.entity) return; const s=S[c.entity]; const el=$('cs'+i); if(!el) return;
+    el.textContent=s?s.state.toUpperCase():'--';
+    el.className='s '+(s&&(s.state==='open'||s.state==='on')?'open':'closed');
+  });
+}
+function ctl(i){
+  if(riding) return; const c=CFG.controls[i];
+  if(c.kind==='cover') callService('cover','toggle',{entity_id:c.entity});
+  else callService('homeassistant','toggle',{entity_id:c.entity});
+}
+
+/* ================= GPS, TRIP, MODE ================= */
+let speed=null, riding=false, lowSince=null, lastFix=null, lastFixAt=0, watchId=null;
+let trip = JSON.parse(ls.get('mt03_trip','null')) || {dist:0,moving:0,max:0};
+trip.maxL = trip.maxL||0; trip.maxR = trip.maxR||0;
+let fuelKm = +ls.get('mt03_fuel',0);
+
+function hav(a,b,c,d){ const R=6371, r=x=>x*Math.PI/180, dl=r(c-a), dn=r(d-b);
+  const h=Math.sin(dl/2)**2+Math.cos(r(a))*Math.cos(r(c))*Math.sin(dn/2)**2; return 2*R*Math.asin(Math.sqrt(h)); }
+
+function startGPS(){
+  if(!navigator.geolocation){ $('iGPS').textContent='UNSUPPORTED'; return; }
+  watchId=navigator.geolocation.watchPosition(p=>{
+    const c=p.coords;
+    if(!Number.isFinite(c.accuracy) || c.accuracy>CFG.gpsMaxAccuracyM){
+      $('gdot').classList.remove('on'); $('iGPS').textContent=Number.isFinite(c.accuracy)?'POOR ±'+Math.round(c.accuracy)+' m':'POOR FIX';
+      return;
+    }
+    lastFixAt=Date.now();
+    $('gdot').classList.add('on'); $('iGPS').textContent='±'+Math.round(c.accuracy)+' m';
+    let v = c.speed!=null && Number.isFinite(c.speed) ? c.speed*3.6 : null;
+    if(lastFix){
+      const dt=(p.timestamp-lastFix.t)/1000, d=hav(lastFix.lat,lastFix.lon,c.latitude,c.longitude);
+      if(v===null && dt>0) v=d/dt*3600;
+      if(v!==null && (v<0 || v>CFG.gpsMaxKmh)) v=null;
+      if(dt>0 && dt<10 && v!==null && v>=CFG.parkBelowKmh && d<((v/3.6)*dt*1.6+20)/1000){
+        trip.dist+=d; fuelKm+=d; trip.moving+=dt;
+      }
+    }
+    lastFix={lat:c.latitude,lon:c.longitude,t:p.timestamp};
+    speed = v===null ? 0 : v;
+    if(!Number.isFinite(speed) || speed>CFG.gpsMaxKmh || speed<1.5) speed=0;
+    trip.max=Math.max(trip.max,speed);
+    updateMode(); renderRide(); renderChill(); renderAlerts();
+  }, ()=>{ $('gdot').classList.remove('on'); $('iGPS').textContent='NO FIX'; },
+  {enableHighAccuracy:true, maximumAge:1000, timeout:15000});
+}
+
+function updateMode(){
+  const now=Date.now();
+  if(speed>CFG.rideOnKmh){ lowSince=null; if(!riding) setRiding(true); }
+  else if(speed<CFG.parkBelowKmh){
+    if(lowSince===null) lowSince=now;
+    if(riding && now-lowSince>CFG.parkDelayMs) setRiding(false);
+  } else lowSince=null;
+}
+function setRiding(on){
+  riding=on; document.body.classList.toggle('riding',on);
+  $('mode').textContent=on?'RIDING':'PARKED';
+  if(on){ $('pages').scrollTo({left:0,behavior:'smooth'}); }
+  renderHA();   // refresh hints/alerts that depend on riding state
+}
+setInterval(()=>{ // GPS outage: show '--' and the alert, but NEVER auto-park a moving bike (tunnel / trees)
+  if(lastFixAt && Date.now()-lastFixAt>20000){
+    $('gdot').classList.remove('on'); speed=0;
+    if(riding && Date.now()-lastFixAt>CFG.gpsLostParkMs) setRiding(false);   // only after a long outage
+    renderRide(); renderAlerts();
+  }
+},3000);
+
+function fmtTime(s){ s=Math.floor(s); const h=Math.floor(s/3600), m=Math.floor(s%3600/60); return h+':'+String(m).padStart(2,'0'); }
+function renderGpsLabel(){
+  const el=$('gpsLabel'); if(!el) return;
+  const age=lastFixAt?Date.now()-lastFixAt:Infinity;
+  const good=age<=20000 && $('gdot').classList.contains('on');
+  el.textContent=good?'GPS LIVE':age===Infinity?'GPS WAITING':'GPS NO FIX';
+  el.className='live-indicator '+(good?'good':'bad');
+}
+function renderRide(){
+  renderGpsLabel();
+  $('spd').textContent = lastFixAt && Date.now()-lastFixAt<=20000 && $('gdot').classList.contains('on') ? Math.round(speed||0) : '--';
+  $('tDist').textContent=trip.dist.toFixed(1);
+  $('tTime').textContent=fmtTime(trip.moving);
+  $('tAvg').textContent= trip.moving>5 ? Math.round(trip.dist/(trip.moving/3600)) : 0;
+  $('tMax').textContent=Math.round(trip.max);
+  $('tMaxL').textContent=Math.round(trip.maxL); $('tMaxR').textContent=Math.round(trip.maxR);
+  const f=$('tFuel'); f.textContent=fuelKm.toFixed(1);
+  f.className='v '+(fuelKm>=CFG.fuelRedKm?'red':fuelKm>=CFG.fuelAmberKm?'amber':'');
+  const b=$('fuelBanner');
+  b.classList.toggle('show',fuelKm>=CFG.fuelAmberKm);
+  b.textContent=fuelKm>=CFG.fuelRedKm?'FUEL — FILL UP SOON ('+Math.round(fuelKm)+' KM)':'FUEL — '+Math.round(fuelKm)+' KM SINCE FILL';
+}
+function persist(){ ls.set('mt03_trip',JSON.stringify(trip)); ls.set('mt03_fuel',fuelKm); }
+setInterval(persist,5000);
+document.addEventListener('visibilitychange',()=>{ persist(); if(!document.hidden) wake(); });
+
+let fuelArmed=false;
+function fuelled(){
+  const buttons=[...document.querySelectorAll('button')], b=buttons.find(x=>x.getAttribute('onclick')==='fuelled()');
+  if(!fuelArmed){ fuelArmed=true; if(b) b.textContent='TAP AGAIN TO CONFIRM'; setTimeout(()=>{fuelArmed=false;if(b)b.textContent='FUELLED — RESET'},3000); return; }
+  fuelKm=0; fuelArmed=false; if(b) b.textContent='FUELLED — RESET'; persist(); renderRide();
+}
+let resetArmed=false;
+function resetTrip(){
+  const b=$('resetBtn');
+  if(!resetArmed){ resetArmed=true; b.textContent='TAP AGAIN TO CONFIRM'; setTimeout(()=>{resetArmed=false;b.textContent='RESET TRIP'},3000); return; }
+  trip={dist:0,moving:0,max:0,maxL:0,maxR:0}; resetArmed=false; b.textContent='RESET TRIP'; persist(); renderRide();
+}
+
+/* ================= LEAN ANGLE (calibrated phone orientation) ================= */
+/*
+  S22 Ultra / Android portrait mount:
+  DeviceOrientation beta/gamma axes change meaning when the screen orientation changes.
+  Convert the reported orientation to a screen-relative roll first, then subtract a
+  bike-upright calibration. This makes small mount-angle errors harmless.
+
+  This remains an APPROXIMATE motorcycle lean indicator: phone orientation sensors can
+  be disturbed by vibration/acceleration. It is not a safety/traction measurement.
+*/
+let leanZero = +ls.get('mt03_leanzero',0), leanRaw=null, lean=null, leanShownAt=0;
+let orientSeenAt=0, leanCalibrated = ls.get('mt03_lean_calibrated','0')==='1';
+
+function screenAngle(){
+  if(screen.orientation && Number.isFinite(screen.orientation.angle)) return screen.orientation.angle;
+  if(typeof window.orientation==='number') return window.orientation;
+  return 0;
+}
+
+/* Convert beta/gamma to roll relative to the CURRENT screen orientation.
+   Portrait (0°) is the expected S22 Ultra mounting mode. */
+function phoneRoll(betaDeg,gammaDeg){
+  const b=betaDeg*Math.PI/180, g=gammaDeg*Math.PI/180;
+  // Existing portrait roll formulation, robust when phone is tilted toward/away from rider.
+  let r=Math.atan2(Math.cos(b)*Math.sin(g), Math.sin(b))*180/Math.PI;
+  const a=((screenAngle()%360)+360)%360;
+  // Remap for accidental landscape/reverse portrait use.
+  if(a===90) r = 90-betaDeg;
+  else if(a===270) r = betaDeg-90;
+  else if(a===180) r = -r;
+  // Normalize to [-180,180].
+  r=((r+180)%360+360)%360-180;
+  return r;
+}
+
+function angleDelta(a,b){
+  return ((a-b+180)%360+360)%360-180;
+}
+
+function onOrient(e){
+  if(e.beta==null || e.gamma==null || !Number.isFinite(e.beta) || !Number.isFinite(e.gamma)) return;
+  orientSeenAt=Date.now();
+  leanRaw=phoneRoll(e.beta,e.gamma);
+
+  if(!leanCalibrated){
+    lean=null;
+    renderLean();
+    return;
+  }
+
+  let v=angleDelta(leanRaw,leanZero);
+  // Anything beyond this is almost certainly mount/sensor error for this dashboard.
+  v=Math.max(-70,Math.min(70,v));
+
+  // Light filtering: enough to suppress bar vibration without making the display sluggish.
+  lean = lean===null ? v : lean*0.78+v*0.22;
+
+  // Ignore tiny sensor noise for recorded maxima.
+  if(riding && Math.abs(lean)>=2){
+    trip.maxL=Math.max(trip.maxL,-lean);
+    trip.maxR=Math.max(trip.maxR,lean);
+  }
+  const now=Date.now();
+  if(now-leanShownAt>100){ leanShownAt=now; renderLean(); }
+}
+
+function renderLean(){
+  const out=$('lean');
+  if(!leanCalibrated){
+    out.textContent=leanRaw===null?'SENSOR --':'ZERO';
+    const f=$('leanFill'); if(f){f.style.width='0';f.style.left='50%';}
+    return;
+  }
+  if(lean===null){
+    out.textContent=(orientSeenAt && Date.now()-orientSeenAt>3000)?'NO SENSOR':'--';
+    return;
+  }
+  const a=Math.round(Math.abs(lean));
+  out.textContent = a<1 ? '0°' : a+'° '+(lean<0?'L':'R');
+  const f=$('leanFill'), w=Math.min(50,Math.abs(lean)/60*50);
+  if(f){ f.style.width=w+'%'; f.style.left=lean<0?(50-w)+'%':'50%'; }
+}
+
+function startLean(){
+  window.addEventListener('deviceorientation',onOrient,true);
+  window.addEventListener('orientationchange',()=>{ lean=null; renderLean(); });
+  if(screen.orientation && screen.orientation.addEventListener)
+    screen.orientation.addEventListener('change',()=>{ lean=null; renderLean(); });
+  setInterval(renderLean,500);
+}
+
+async function askMotionPermission(){
+  try{
+    if(typeof DeviceOrientationEvent!=='undefined' &&
+       typeof DeviceOrientationEvent.requestPermission==='function'){
+      await DeviceOrientationEvent.requestPermission();
+    }
+  }catch(e){}
+}
+
+function zeroLean(){
+  if(leanRaw===null){
+    const el=$('lean'); if(el) el.textContent='NO SENSOR';
+    return;
+  }
+  leanZero=leanRaw;
+  leanCalibrated=true;
+  ls.set('mt03_leanzero',leanZero);
+  ls.set('mt03_lean_calibrated','1');
+  lean=0;
+  renderLean();
+}
+/* ================= ALERTS ================= */
+function renderAlerts(){
+  const E=CFG.ents, m=[];
+  const wb=num(S[E.watchBatt]), pb=phoneBattery(), h=currentHR();
+  if(wb!==null && wb<20) m.push('WATCH BATTERY '+Math.round(wb)+'%');
+  if(pb!==null && pb<20 && !(localCharging && pb>=10)) m.push('PHONE BATTERY '+Math.round(pb)+'%');
+  if(riding && h.source!=='ble') m.push(h.value!==null?'HEART RATE USING SLOW HA FALLBACK':'HEART RATE LIVE BLE NOT CONNECTED');
+  if(h.value!==null && h.value>=maxHR*0.95) m.push('HEART RATE VERY HIGH');
+  if(riding && lastFixAt && Date.now()-lastFixAt>20000) m.push('GPS SIGNAL LOST');
+  const b=$('alertBanner'); b.textContent=m.join(' · '); b.classList.toggle('show',m.length>0);
+}
+
+/* ================= UI: tabs, clock, wake lock ================= */
+let wl=null;
+async function wake(){ try{ if('wakeLock' in navigator) wl=await navigator.wakeLock.request('screen'); }catch(e){} }
+function buildTabs(){
+  const pages=[...document.querySelectorAll('.page')];
+  $('tabs').innerHTML=pages.map((p,i)=>`<div class="tab" data-i="${i}">${p.dataset.name}</div>`).join('');
+  $('tabs').onclick=e=>{ const i=e.target.dataset.i; if(i!==undefined) $('pages').scrollTo({left:i*$('pages').clientWidth,behavior:'smooth'}); };
+  const pg=$('pages');
+  const upd=()=>{ const i=Math.round(pg.scrollLeft/pg.clientWidth);
+    document.querySelectorAll('.tab').forEach((t,j)=>t.classList.toggle('act',i===j));
+    $('pname').textContent=pages[i]?pages[i].dataset.name:''; };
+  pg.addEventListener('scroll',upd,{passive:true}); upd();
+}
+function tick(){ $('clk').textContent=new Date().toLocaleTimeString('en-AU',{hour:'2-digit',minute:'2-digit',hour12:false}); }
+setInterval(tick,10000); tick();
+setInterval(renderHA,2000);   // keeps stale-HR and alert states current
+
+function startAll(){
+  if(started) return; started=true;
+  $('fa').textContent=CFG.fuelAmberKm+' km'; $('fr').textContent=CFG.fuelRedKm+' km';
+  buildControls(); buildTabs(); renderRide(); haConnect(); startGPS(); startLean(); startBattery(); wake();
+  if(!navigator.bluetooth) $('hrz').textContent='BLE UNSUPPORTED';
+}
+document.addEventListener('click',()=>{ wake(); askMotionPermission(); },{once:true});
+
+/* ================= BOOT ================= */
+if(token){ $('setup').classList.add('hidden'); $('app').classList.remove('hidden'); startAll(); }
+else { $('iurl').value=haUrl; $('imax').value=maxHR; }
+</script>
+</body>
+</html>
